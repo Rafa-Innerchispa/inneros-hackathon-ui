@@ -1,0 +1,6 @@
+{
+  "name": "Swarm-OS",
+  "description": "Sistema operativo muti-agente central para PC Doctor S.A. que orquesta solicitudes, diagnósticos, cotizaciones e informes técnicos.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
