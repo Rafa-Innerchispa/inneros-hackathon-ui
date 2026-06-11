@@ -285,8 +285,8 @@ export default function App() {
   const [configWaToken, setConfigWaToken] = useState<string>(() => localStorage.getItem('config_wa_token') || 'swarm_os_evolution_key_2026');
   const [configWaInstance, setConfigWaInstance] = useState<string>(() => localStorage.getItem('config_wa_instance') || 'RalphiIA-pcdoctor');
   const [configWaPhone, setConfigWaPhone] = useState<string>(() => localStorage.getItem('config_wa_phone') || '593999059000');
-  const [configSriUser, setConfigSriUser] = useState<string>(() => localStorage.getItem('config_sri_user') || 'deuna-ruc');
-  const [configSriPass, setConfigSriPass] = useState<string>(() => localStorage.getItem('config_sri_pass') || 'BXQbDtMt');
+  const [configSriUser, setConfigSriUser] = useState<string>(() => localStorage.getItem('config_sri_user') || '');
+  const [configSriPass, setConfigSriPass] = useState<string>(() => localStorage.getItem('config_sri_pass') || '');
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   useEffect(() => {
@@ -304,9 +304,9 @@ export default function App() {
   const [configSriSync, setConfigSriSync] = useState<string>('email');
   const [configContificoKey, setConfigContificoKey] = useState<string>('contifico_v2_apikey_secured');
   const [configContificoUser, setConfigContificoUser] = useState<string>('admin@pcdoctor.com.ec');
-  const [configContificoPass, setConfigContificoPass] = useState<string>('PCD0ct0rContifico@@2026');
+  const [configContificoPass, setConfigContificoPass] = useState<string>('');
   const [configSigPath, setConfigSigPath] = useState<string>('/data_historica/config/firma_pc_doctor.p12');
-  const [configSigPass, setConfigSigPass] = useState<string>('PCD0ct0rSig2026');
+  const [configSigPass, setConfigSigPass] = useState<string>('');
 
   // New Email state in config modal
   const [newEmailAddr, setNewEmailAddr] = useState<string>('');
@@ -365,9 +365,8 @@ export default function App() {
       }
     }
     return [
-      { email: "contabilidad@pcdoctor.com.ec", host: "mail.pcdoctor.com.ec", port: 993, provider: "custom", password: "PCD0ct0rContabilidad@@" },
-      { email: "rlopez@pcdoctor.com.ec", host: "mail.pcdoctor.com.ec", port: 993, provider: "custom", password: "InnerSparkLopez@@" },
-      { email: "rlopez@innerspark.live", host: "mail.innerspark.live", port: 993, provider: "custom", password: "InnerSparkLopez@@" }
+      { email: "contabilidad@pcdoctor.com.ec", host: "mail.pcdoctor.com.ec", port: 993, provider: "custom" },
+      { email: "rlopez@pcdoctor.com.ec", host: "mail.pcdoctor.com.ec", port: 993, provider: "custom" }
     ];
   });
 

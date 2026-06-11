@@ -59,15 +59,65 @@ function mongoDbNameFromUri(uri: string): string {
   return MONGO_DB;
 }
 
-// Initialize Gemini Client
+// Gemini: soporta claves AIza (legacy) y AQ. (auth keys nuevas de AI Studio, jun 2026)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
-    },
-  },
+  apiKey: GEMINI_API_KEY,
+  httpOptions: { headers: { "User-Agent": "aistudio-build" } },
 });
+
+/** Llamada REST nativa — las claves AQ. fallan con el SDK (@google/genai) en algunos entornos. */
+async function geminiGenerateText(
+  prompt: string,
+  extraBody?: Record<string, unknown>
+): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    ...extraBody,
+  };
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": "aistudio-build",
+  };
+
+  const fetchUrl = GEMINI_API_KEY.startsWith("AIza")
+    ? `${url}?key=${encodeURIComponent(GEMINI_API_KEY)}`
+    : url;
+
+  // AQ. auth keys: probar x-goog-api-key y luego Bearer (Google en transición 2026)
+  const authAttempts: Record<string, string>[] = GEMINI_API_KEY.startsWith("AQ.")
+    ? [
+        { "x-goog-api-key": GEMINI_API_KEY },
+        { Authorization: `Bearer ${GEMINI_API_KEY}` },
+      ]
+    : [{}];
+
+  let res: Response | null = null;
+  let data: any = null;
+  for (const authHeaders of authAttempts) {
+    res = await fetch(fetchUrl, {
+      method: "POST",
+      headers: { ...headers, ...authHeaders },
+      body: JSON.stringify(body),
+    });
+    data = await res.json();
+    if (res.ok) break;
+    if (res.status !== 401) break;
+  }
+  if (!res) throw new Error("Gemini fetch failed");
+  if (!res.ok) {
+    const errMsg = data?.error?.message || JSON.stringify(data);
+    throw new Error(`[Gemini ${res.status}] ${errMsg}`);
+  }
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).join("") || "";
+  return text || "No se obtuvo respuesta del enjambre.";
+}
 
 // Cache MongoDB Connections
 let mongoClientCache: MongoClient | null = null;
@@ -414,8 +464,8 @@ app.post("/api/sri/validate", async (req, res) => {
     };
 
     // First, always attempt to perform the live call to Intuito S.A. real-time API
-    const targetUser = sriUser || process.env.SRI_API_USER || "deuna-ruc";
-    const targetPass = sriPass || process.env.SRI_API_PASS || "BXQbDtMt";
+    const targetUser = sriUser || process.env.SRI_API_USER || "";
+    const targetPass = sriPass || process.env.SRI_API_PASS || "";
 
     let apiSuccess = false;
     let apiData: any = null;
@@ -520,7 +570,7 @@ Devuelve el resultado en un único objeto JSON estructurado con las siguientes p
     try {
       console.log(`[SRI] Usando Gemini con Search Grounding para verificar [${cleanKey}]...`);
       const gResponse = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: GEMINI_MODEL,
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -676,7 +726,7 @@ Devuelve estrictamente un arreglo en formato JSON con objetos que contengan:
 `;
 
       const gResponse = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: GEMINI_MODEL,
         contents: emailsPrompt,
         config: {
           responseMimeType: "application/json",
@@ -867,11 +917,29 @@ app.post("/api/chat", async (req, res) => {
   prompt += `Responde de forma concisa, profesional, realista, amigable, orientada a la ingeniería en sistemas y computación en Ecuador, en español Castellano. Recuerda que eres un asistente útil; di lo que puedes hacer basándote únicamente en las bases disponibles y evita inventar estados falsos de droids del enjambre.`;
 
   try {
-    const gResponse = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-    });
-    res.json({ success: true, text: gResponse.text || "No se obtuvo respuesta del enjambre." });
+    let text = "";
+    try {
+      text = GEMINI_API_KEY.startsWith("AQ.")
+        ? await geminiGenerateText(prompt)
+        : (await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt })).text || "";
+    } catch (geminiErr: any) {
+      // Si AQ./Gemini falla (401 restricciones), usar Ollama real en Swarm-OS
+      console.warn("[Gemini] fallback Ollama:", cleanAiErrorMessage(geminiErr));
+      const ollamaRes = await fetch(`${SWARM_OS_URL}/api/v1/assistant/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, session_id: "hackathon-demo" }),
+      });
+      if (ollamaRes.ok) {
+        const ollamaData = await ollamaRes.json();
+        text =
+          (ollamaData.reply || ollamaData.response || ollamaData.text || "") +
+          "\n\n_(Respuesta vía Ollama local — Gemini en verificación de clave AQ.)_";
+      } else {
+        throw geminiErr;
+      }
+    }
+    res.json({ success: true, text: text || "No se obtuvo respuesta del enjambre." });
   } catch (error: any) {
     console.log("[Local Resilient Engine] Local intelligence fallback mode active:", cleanAiErrorMessage(error));
     
