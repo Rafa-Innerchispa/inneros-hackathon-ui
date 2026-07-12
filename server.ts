@@ -923,8 +923,10 @@ app.post("/api/chat", async (req, res) => {
         ? await geminiGenerateText(prompt)
         : (await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt })).text || "";
     } catch (geminiErr: any) {
-      // Si AQ./Gemini falla (401 restricciones), usar Ollama real en Swarm-OS
-      console.warn("[Gemini] fallback Ollama:", cleanAiErrorMessage(geminiErr));
+      const geminiMsg = cleanAiErrorMessage(geminiErr);
+      const creditsDepleted =
+        geminiMsg.includes("429") || geminiMsg.includes("depleted") || geminiMsg.includes("quota");
+      console.warn("[Gemini] fallback Ollama:", geminiMsg);
       const ollamaRes = await fetch(`${SWARM_OS_URL}/api/v1/assistant/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -932,9 +934,10 @@ app.post("/api/chat", async (req, res) => {
       });
       if (ollamaRes.ok) {
         const ollamaData = await ollamaRes.json();
-        text =
-          (ollamaData.reply || ollamaData.response || ollamaData.text || "") +
-          "\n\n_(Respuesta vía Ollama local — Gemini en verificación de clave AQ.)_";
+        const suffix = creditsDepleted
+          ? "\n\n_(Clave Gemini AQ. válida ✅ — créditos Google agotados; respuesta vía Ollama local.)_"
+          : "\n\n_(Respuesta vía Ollama local — Gemini no disponible.)_";
+        text = (ollamaData.reply || ollamaData.response || ollamaData.text || "") + suffix;
       } else {
         throw geminiErr;
       }

@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Swarm-OS Google AI Studio Interface
 
-# Run and deploy your AI Studio app
+**Gemini API Integration Sandbox & Interface**
 
-This contains everything you need to run your app locally.
+Este proyecto expone una interfaz integrada para el procesamiento rápido de prompts y generación mediante la API de Gemini (Google AI Studio) dentro de Swarm-OS.
 
-View your app in AI Studio: https://ai.studio/apps/a2d230ce-a60c-431a-a56f-f24a6aa14989
+## 📊 Arquitectura y Recursos
+* **Puerto del Servidor:** `5180` (Vite / Node.js development server)
+* **Servicio systemd:** `swarm-os-google-ai-studio.service`
+* **Directorio Base:** `/home/rlopez/projects/swarm-os-google_ai_studio`
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 Arranque Rápido
+1. Instalar dependencias:
+   ```bash
+   npm install
+   ```
+2. Ejecutar de forma local:
+   ```bash
+   npm run dev
+   ```
+3. Ejecutar mediante systemd:
+   ```bash
+   sudo systemctl restart swarm-os-google-ai-studio
+   ```

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Túnel ngrok para URL pública Devpost (UI :5180)
+# Túnel ngrok para URL pública Devpost
+# Recomendado: ADMIN_PORT=5173 (Ralphi IA real + InnerOS /inneros)
+# Alternativo: PORT=5180 (solo UI AI Studio — muchos bugs)
 set -euo pipefail
 
-UI_PORT="${PORT:-5180}"
+UI_PORT="${ADMIN_PORT:-${PORT:-5173}}"
 UI_ROOT="${UI_ROOT:-/home/rlopez/projects/swarm-os-google_ai_studio}"
 
 # Cargar token desde .env si existe
